@@ -8,6 +8,7 @@ from geneticalgorithm2 import geneticalgorithm2 as ga
 from pyswarm import pso
 from matplotlib.animation import FuncAnimation
 import streamlit.components.v1 as components
+import random
 
 def plot_graph(G):
 	plt.subplot(122)
@@ -221,6 +222,35 @@ def update2(frame,data,scatter):
     scatter.set_offsets([x0,y0])
     return scatter,
 
+def g(X):
+    A = 10
+    n = 2
+    return A*n + (X[0]**2 - 10*np.cos(2*np.pi*X[0])) + (X[1]**2 - 10*np.cos(2*np.pi*X[1]))
+
+def get_best(particles):
+    best = 101
+    for particle in particles:
+        if particle.best < best:
+            best = particle.best
+            G = particle.X 
+    return G
+
+def update3(frame,data,scatter):
+    #x0 = data[-1][0] - eta*2*data[-1][0]
+    #y0 = data[-1][1] - eta*2*data[-1][1]
+    #x0 = data[-1][0] - eta*(2*data[-1][0] + 20*np.pi*np.sin(2*np.pi*data[-1][0]))
+    #y0 = data[-1][1] = eta*(2*data[-1][1] + 20*np.pi*np.sin(2*np.pi*data[-1][1]))
+    #data.append([x0,y0])
+    #print(x0)
+    G = get_best(data)
+    pos = []
+    for particle in data:
+        particle.update(G,g)
+        pos.append(particle.X)
+    #print(pos)
+    scatter.set_offsets(pos)
+    return scatter,
+
 
 xlist = np.linspace(-5.12, 5.12, 100)
 ylist = np.linspace(-5.12, 5.12, 100)
@@ -229,9 +259,7 @@ Z = X**2 + Y**2
 fig,ax=plt.subplots(1,1)
 cp = ax.contourf(X, Y, Z,levels=14, cmap="RdBu_r")
 fig.colorbar(cp) # Add a colorbar to a plot
-ax.set_title('Filled Contours Plot')
 #ax.set_xlabel('x (cm)')
-ax.set_ylabel('y (cm)')
 x0 = 4
 y0 = 4
 eta = 0.1
@@ -250,9 +278,7 @@ Z = A*n + (X**2 - 10*np.cos(2*np.pi*X)) + (Y**2 - 10*np.cos(2*np.pi*Y))
 fig,ax=plt.subplots(1,1)
 cp = ax.contourf(X, Y, Z,levels=14, cmap="RdBu_r")
 fig.colorbar(cp) # Add a colorbar to a plot
-ax.set_title('Filled Contours Plot')
 #ax.set_xlabel('x (cm)')
-ax.set_ylabel('y (cm)')
 x0 = 4
 y0 = 4
 eta = 0.001
@@ -260,4 +286,40 @@ data2 = [[x0,y0]]
 scatter = ax.scatter([],[],c='m')
 
 ani = FuncAnimation(fig, update2, 25,fargs=(data2,scatter), interval = 100, blit=True)
+components.html(ani.to_jshtml(), height=400)
+
+st.write("""## PSO""")
+
+class Particle():
+    def __init__(self):
+        self.X = 8*np.random.rand(2) - 4
+        self.V = .2*np.random.rand(2) - .1
+        self.P = self.X
+        self.best = 100
+
+    def update(self,G,f):
+        self.V = 0.6*self.V + 2*random.random()*(self.P-self.X) + 2*random.random()*(G-self.X)
+        self.X = self.X + self.V
+        if f(self.X) < self.best:
+            self.best = f(self.X)
+            self.P = self.X        
+
+X, Y = np.meshgrid(xlist, ylist)
+A = 10
+n = 2
+Z = A*n + (X**2 - 10*np.cos(2*np.pi*X)) + (Y**2 - 10*np.cos(2*np.pi*Y))
+fig,ax=plt.subplots(1,1)
+cp = ax.contourf(X, Y, Z,levels=14, cmap="RdBu_r")
+fig.colorbar(cp) # Add a colorbar to a plot
+#ax.set_xlabel('x (cm)')
+x0 = 4
+y0 = 4
+eta = 0.001
+N = 10
+data2 = [Particle() for i in range(N)]
+for data in data2:
+    print(data.X)
+scatter = ax.scatter([],[],c='m')
+
+ani = FuncAnimation(fig, update3,fargs=(data2,scatter), interval = 500, blit=True)
 components.html(ani.to_jshtml(), height=400)
